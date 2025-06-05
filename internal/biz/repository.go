@@ -136,15 +136,23 @@ type HistoricProcessInstanceRepo interface {
 	// 创建历史流程实例
 	Create(ctx context.Context, hpi *ent.HistoricProcessInstance) (*ent.HistoricProcessInstance, error)
 	// 根据ID获取历史流程实例
-	GetByID(ctx context.Context, id string) (*ent.HistoricProcessInstance, error)
+	GetHistoricProcessInstance(ctx context.Context, id int64) (*ent.HistoricProcessInstance, error)
 	// 分页查询历史流程实例
-	List(ctx context.Context, filter *ProcessInstanceFilter, opts *QueryOptions) ([]*ent.HistoricProcessInstance, *PaginationResult, error)
+	ListHistoricProcessInstances(ctx context.Context, filter *HistoricProcessInstanceFilter) ([]*ent.HistoricProcessInstance, int, error)
 	// 计数查询
-	Count(ctx context.Context, filter *ProcessInstanceFilter) (int, error)
+	Count(ctx context.Context, filter *HistoricProcessInstanceFilter) (int, error)
 	// 根据流程定义ID查询历史流程实例
 	ListByProcessDefinitionID(ctx context.Context, processDefinitionID string, opts *QueryOptions) ([]*ent.HistoricProcessInstance, *PaginationResult, error)
 	// 删除历史流程实例
-	Delete(ctx context.Context, id string) error
+	DeleteHistoricProcessInstance(ctx context.Context, id int64) error
+	// 批量删除历史流程实例
+	BatchDeleteHistoricProcessInstances(ctx context.Context, processDefinitionKey string, endTimeBefore time.Time) (int64, error)
+	// 获取历史变量
+	GetHistoricVariables(ctx context.Context, processInstanceID int64) ([]*HistoricVariableInstance, error)
+	// 获取流程统计信息
+	GetProcessStatistics(ctx context.Context, processDefinitionKey string, startTime, endTime time.Time) (*ProcessStatistics, error)
+	// 获取流程趋势分析
+	GetProcessTrend(ctx context.Context, processDefinitionKey string, startTime, endTime time.Time, granularity string) ([]*ProcessTrendData, error)
 }
 
 // ProcessVariableRepo 流程变量仓储接口
