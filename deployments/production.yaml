@@ -1,0 +1,334 @@
+# 工作流引擎生产环境部署配置
+# Production Deployment Configuration for Workflow Engine
+
+# 服务器配置
+server:
+  # HTTP服务器配置
+  http:
+    addr: "0.0.0.0:8080" # 监听地址
+    timeout: 60s # 请求超时
+    read_timeout: 30s # 读取超时
+    write_timeout: 30s # 写入超时
+    idle_timeout: 120s # 空闲超时
+    max_header_bytes: 1048576 # 最大头部字节数(1MB)
+
+  # 优雅关闭配置
+  shutdown:
+    timeout: 30s # 关闭超时
+
+  # TLS配置（生产环境启用）
+  tls:
+    enabled: true # 启用TLS
+    cert_file: "/etc/ssl/certs/workflow-engine.crt"
+    key_file: "/etc/ssl/private/workflow-engine.key"
+    min_version: "1.2" # 最小TLS版本
+
+# 数据库配置
+database:
+  # PostgreSQL连接配置
+  postgres:
+    host: "${DB_HOST:workflow-db}" # 数据库主机
+    port: "${DB_PORT:5432}" # 数据库端口
+    user: "${DB_USER:workflow}" # 数据库用户
+    password: "${DB_PASSWORD}" # 数据库密码
+    database: "${DB_NAME:workflow_engine}" # 数据库名
+    sslmode: "require" # SSL模式
+
+  # 连接池配置
+  pool:
+    max_open_conns: 100 # 最大连接数
+    max_idle_conns: 25 # 最大空闲连接数
+    conn_max_lifetime: 600s # 连接最大生命周期(10分钟)
+    conn_max_idle_time: 300s # 连接最大空闲时间(5分钟)
+
+  # 查询优化配置
+  query:
+    timeout: 30s # 查询超时
+    slow_threshold: 1s # 慢查询阈值
+    prepared_statements: true # 启用预编译语句
+
+  # 事务配置
+  transaction:
+    timeout: 60s # 事务超时
+    isolation_level: "READ_COMMITTED" # 事务隔离级别
+
+# Redis缓存配置
+redis:
+  # 连接配置
+  connection:
+    addr: "${REDIS_ADDR:workflow-redis:6379}" # Redis地址
+    password: "${REDIS_PASSWORD}" # Redis密码
+    db: 0 # 数据库索引
+
+  # 连接池配置
+  pool:
+    max_retries: 3 # 最大重试次数
+    min_retry_backoff: 100ms # 最小重试间隔
+    max_retry_backoff: 1s # 最大重试间隔
+    dial_timeout: 10s # 连接超时
+    read_timeout: 5s # 读取超时
+    write_timeout: 5s # 写入超时
+    pool_size: 50 # 连接池大小
+    min_idle_conns: 10 # 最小空闲连接数
+    pool_timeout: 10s # 连接池超时
+    idle_timeout: 300s # 空闲超时(5分钟)
+    idle_check_frequency: 60s # 空闲检查频率
+
+  # 缓存配置
+  cache:
+    default_expiration: 1800s # 默认过期时间(30分钟)
+    cleanup_interval: 300s # 清理间隔(5分钟)
+    max_memory: "256mb" # 最大内存使用
+    max_memory_policy: "allkeys-lru" # 内存回收策略
+
+# Temporal工作流引擎配置
+temporal:
+  # 客户端配置
+  client:
+    host_port: "${TEMPORAL_HOST:workflow-temporal:7233}" # Temporal服务地址
+    namespace: "${TEMPORAL_NAMESPACE:default}" # 命名空间
+
+  # Worker配置
+  worker:
+    task_queue: "workflow-task-queue" # 任务队列名
+    max_concurrent_activities: 100 # 最大并发活动数
+    max_concurrent_workflows: 50 # 最大并发工作流数
+    worker_activites_per_second: 200 # 每秒活动数限制
+    worker_workflows_per_second: 100 # 每秒工作流数限制
+
+  # 重试策略
+  retry:
+    initial_interval: 1s # 初始重试间隔
+    backoff_coefficient: 2.0 # 重试间隔系数
+    maximum_interval: 60s # 最大重试间隔
+    maximum_attempts: 3 # 最大重试次数
+
+# JWT认证配置
+jwt:
+  # 密钥配置
+  secret: "${JWT_SECRET}" # JWT签名密钥
+  issuer: "workflow-engine" # 签发者
+  audience: "workflow-users" # 受众
+
+  # Token配置
+  access_token:
+    expire_time: 3600s # 访问令牌过期时间(1小时)
+    algorithm: "HS256" # 签名算法
+
+  refresh_token:
+    expire_time: 604800s # 刷新令牌过期时间(7天)
+    algorithm: "HS256" # 签名算法
+
+# 日志配置
+logging:
+  # 基础配置
+  level: "${LOG_LEVEL:info}" # 日志级别
+  format: "json" # 日志格式
+  timestamp: true # 包含时间戳
+  caller: true # 包含调用者信息
+
+  # 输出配置
+  output:
+    - type: "file" # 文件输出
+      path: "/var/log/workflow-engine/app.log"
+      max_size: 100 # 最大文件大小(MB)
+      max_backups: 10 # 最大备份数
+      max_age: 30 # 最大保留天数
+      compress: true # 压缩备份
+
+    - type: "stdout" # 标准输出
+
+# 监控配置
+monitoring:
+  # Prometheus指标配置
+  prometheus:
+    enabled: true # 启用Prometheus
+    endpoint: "/metrics" # 指标端点
+    gather_interval: 15s # 收集间隔
+
+    # 指标配置
+    metrics:
+      - name: "http_requests_total" # HTTP请求总数
+        help: "Total number of HTTP requests"
+        type: "counter"
+
+      - name: "http_request_duration" # HTTP请求耗时
+        help: "HTTP request duration in seconds"
+        type: "histogram"
+        buckets: [0.1, 0.5, 1.0, 2.0, 5.0]
+
+      - name: "workflow_instances_total" # 工作流实例总数
+        help: "Total number of workflow instances"
+        type: "counter"
+
+      - name: "active_workflows" # 活跃工作流数
+        help: "Number of active workflows"
+        type: "gauge"
+
+      - name: "database_connections" # 数据库连接数
+        help: "Number of database connections"
+        type: "gauge"
+
+  # 健康检查配置
+  health:
+    enabled: true # 启用健康检查
+    endpoint: "/health" # 健康检查端点
+    interval: 30s # 检查间隔
+    timeout: 10s # 检查超时
+
+    # 检查项配置
+    checks:
+      - name: "database" # 数据库检查
+        timeout: 5s
+
+      - name: "redis" # Redis检查
+        timeout: 3s
+
+      - name: "temporal" # Temporal检查
+        timeout: 5s
+
+# 安全配置
+security:
+  # CORS配置
+  cors:
+    enabled: true # 启用CORS
+    allowed_origins:
+      - "https://workflow-ui.example.com"
+      - "https://admin.example.com"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "Authorization"
+      - "Content-Type"
+      - "X-Requested-With"
+    max_age: 86400 # 预检请求缓存时间
+
+  # 限流配置
+  rate_limit:
+    enabled: true # 启用限流
+    requests_per_second: 100 # 每秒请求数
+    burst_size: 200 # 突发大小
+
+  # IP白名单（可选）
+  ip_whitelist:
+    enabled: false # 启用IP白名单
+    allowed_ips: [] # 允许的IP列表
+
+  # 请求大小限制
+  request_limits:
+    max_request_size: 10485760 # 最大请求大小(10MB)
+    max_multipart_memory: 33554432 # 最大多部分内存(32MB)
+
+# 缓存优化配置
+cache:
+  # 应用层缓存
+  application:
+    process_definitions:
+      ttl: 3600s # 流程定义缓存TTL
+      max_size: 1000 # 最大缓存条目数
+
+    user_sessions:
+      ttl: 1800s # 用户会话缓存TTL
+      max_size: 10000 # 最大缓存条目数
+
+    workflow_status:
+      ttl: 300s # 工作流状态缓存TTL
+      max_size: 50000 # 最大缓存条目数
+
+  # 查询结果缓存
+  query_cache:
+    enabled: true # 启用查询缓存
+    default_ttl: 600s # 默认TTL
+    max_memory: "128mb" # 最大内存使用
+
+# 备份配置
+backup:
+  # 自动备份配置
+  schedule:
+    enabled: true # 启用定时备份
+    cron: "0 2 * * *" # 每天凌晨2点备份
+
+  # 备份存储配置
+  storage:
+    type: "s3" # 存储类型
+    s3:
+      bucket: "${BACKUP_S3_BUCKET}" # S3存储桶
+      region: "${BACKUP_S3_REGION}" # S3区域
+      access_key: "${BACKUP_S3_ACCESS_KEY}"
+      secret_key: "${BACKUP_S3_SECRET_KEY}"
+
+  # 备份保留策略
+  retention:
+    daily: 30 # 保留30天的日备份
+    weekly: 12 # 保留12周的周备份
+    monthly: 12 # 保留12个月的月备份
+
+# 性能调优配置
+performance:
+  # 垃圾回收配置
+  gc:
+    target_percentage: 100 # GC目标百分比
+
+  # 内存配置
+  memory:
+    max_heap_size: "2048m" # 最大堆大小
+
+  # 并发配置
+  concurrency:
+    max_procs: 0 # 最大处理器数(0=自动)
+    gomaxprocs: 0 # GOMAXPROCS(0=自动)
+
+# 环境变量配置
+env:
+  # 环境标识
+  environment: "production" # 环境名称
+  debug: false # 调试模式
+
+  # 服务发现
+  service_discovery:
+    enabled: true # 启用服务发现
+    provider: "kubernetes" # 提供者
+
+  # 配置热重载
+  hot_reload:
+    enabled: false # 生产环境禁用热重载
+
+# 通知配置
+notifications:
+  # 邮件通知
+  email:
+    enabled: true # 启用邮件通知
+    smtp_host: "${SMTP_HOST}" # SMTP主机
+    smtp_port: "${SMTP_PORT:587}" # SMTP端口
+    username: "${SMTP_USERNAME}" # SMTP用户名
+    password: "${SMTP_PASSWORD}" # SMTP密码
+    from: "noreply@workflow-engine.com" # 发件人
+
+  # Webhook通知
+  webhook:
+    enabled: true # 启用Webhook通知
+    timeout: 30s # 请求超时
+    retry_attempts: 3 # 重试次数
+
+# 审计配置
+audit:
+  # 审计日志
+  logging:
+    enabled: true # 启用审计日志
+    file_path: "/var/log/workflow-engine/audit.log"
+    max_size: 100 # 最大文件大小(MB)
+    max_backups: 30 # 最大备份数
+    max_age: 365 # 最大保留天数(1年)
+
+  # 审计事件
+  events:
+    login: true # 记录登录事件
+    logout: true # 记录登出事件
+    workflow_start: true # 记录工作流启动
+    workflow_complete: true # 记录工作流完成
+    task_complete: true # 记录任务完成
+    permission_denied: true # 记录权限拒绝
