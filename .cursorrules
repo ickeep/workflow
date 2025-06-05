@@ -1,0 +1,235 @@
+# Workflow Engine 项目开发规则
+
+## 项目概述
+这是一个基于 Go 语言开发的工作流引擎项目，使用以下技术栈：
+- **框架**: Kratos v2 (Go 微服务框架) - https://github.com/go-kratos/kratos
+- **ORM**: Ent (Go 实体框架) - https://entgo.io/zh/docs/getting-started/
+- **工作流引擎**: Temporal - https://docs.temporal.io/
+- **配置格式**: JSON
+- **参考文档**: https://workflow-engine-book.shuwoom.com/
+
+## 核心功能需求
+基于[流程引擎原理与实践](https://workflow-engine-book.shuwoom.com/)的设计理念：
+
+### 流程定义管理
+1. 创建流程定义 (ProcessDefinition)
+2. 部署流程定义
+3. 版本管理和升级
+4. 流程定义查询和删除
+
+### 流程运行时管理  
+5. 启动流程实例 (ProcessInstance)
+6. 流程实例查询和管理
+7. 流程实例挂起和激活
+8. 流程实例终止和删除
+
+### 任务管理
+9. 用户任务分配和认领
+10. 任务完成和委派
+11. 任务查询和管理
+12. 任务表单处理
+
+### 历史数据管理
+13. 历史流程实例查询
+14. 历史任务查询  
+15. 历史变量查询
+16. 流程分析和报表
+
+### 事件和消息
+17. 事件监听和处理
+18. 信号和消息传递
+19. 定时器事件处理
+20. 边界事件处理
+
+## 代码规范
+
+### 交互和文档规范
+1. **交互语言**: 所有代码交互、提示信息、错误信息优先使用中文
+2. **注释规范**: 
+   - 文件头部注释使用中文说明文件用途和主要功能
+   - 结构体、接口、函数的注释使用中文，详细说明用途、参数、返回值
+   - 复杂业务逻辑必须添加中文注释说明
+   - 关键算法和数据处理流程需要详细的中文注释
+3. **文档要求**:
+   - API 文档使用中文描述
+   - README 和技术文档优先使用中文
+   - 配置文件注释使用中文说明各项配置的作用
+4. **测试规范**:
+   - 测试函数名使用英文，但测试描述使用中文
+   - 测试用例的描述和断言信息使用中文
+   - 测试数据的注释使用中文说明测试场景
+   - 单元测试覆盖率要求 > 80%
+
+### 项目结构
+```
+workflow-engine/
+├── cmd/                    # 应用程序入口
+├── internal/              # 内部应用代码
+│   ├── biz/              # 业务逻辑层
+│   ├── data/             # 数据访问层
+│   ├── service/          # 服务层
+│   └── server/           # 服务器配置
+├── api/                   # API 定义 (protobuf)
+├── configs/              # 配置文件
+├── pkg/                  # 可重用的包
+├── ent/                  # Ent 生成的代码
+├── workflows/            # Temporal 工作流定义
+└── migrations/           # 数据库迁移文件
+```
+
+### Go 代码规范
+1. **包命名**: 使用小写字母，避免下划线
+2. **接口命名**: 以 "er" 结尾 (如 WorkflowRunner, TemplateManager)
+3. **错误处理**: 使用 Kratos 的错误处理模式
+4. **日志**: 使用 Kratos 的日志组件
+5. **配置**: 使用 Kratos 的配置组件
+
+### API 设计规范
+- 使用 Protocol Buffers 定义 API
+- 遵循 RESTful 设计原则
+- 统一的错误响应格式
+- 支持分页查询
+
+### 数据库设计规范
+- 使用 Ent 进行数据建模
+- 表名使用复数形式
+- 字段名使用 snake_case
+- 必须包含 created_at 和 updated_at 字段
+
+## 开发指导
+
+### 创建工作流模板相关代码时：
+- Template 结构体应包含：ID, Name, Description, Config (JSON), Status, CreatedAt, UpdatedAt
+- 支持模板版本管理
+- 验证 JSON 配置的有效性
+- 实现模板的 CRUD 操作
+
+### 工作流运行相关代码时：
+- WorkflowExecution 结构体应包含：ID, TemplateID, Status, Input, Output, StartedAt, CompletedAt
+- 集成 Temporal Client
+- 实现工作流的启动、暂停、恢复、终止操作
+- 提供实时状态查询
+
+### Temporal 工作流定义时：
+- 工作流函数命名：WorkflowName + "Workflow"
+- 活动函数命名：ActivityName + "Activity"
+- 使用结构化的参数和返回值
+- 实现适当的重试策略
+
+### 错误处理：
+- 使用 Kratos errors 包
+- 定义业务特定的错误码
+- 提供详细的错误信息
+
+### 测试：
+- 单元测试覆盖率 > 80%
+- 集成测试覆盖主要业务流程
+- 使用 testify 测试框架
+- **测试文件命名**: 使用 `_test.go` 后缀
+- **测试函数规范**:
+  ```go
+  // TestCreateTemplate 测试创建工作流模板功能
+  func TestCreateTemplate(t *testing.T) {
+      // 准备测试数据
+      template := &Template{
+          Name: "测试模板",
+          Description: "这是一个测试用的工作流模板",
+      }
+      
+      // 执行测试
+      result, err := service.CreateTemplate(template)
+      
+      // 验证结果
+      assert.NoError(t, err, "创建模板不应该返回错误")
+      assert.NotNil(t, result, "创建的模板不应该为空")
+      assert.Equal(t, "测试模板", result.Name, "模板名称应该匹配")
+  }
+  ```
+- **子测试规范**:
+  ```go
+  func TestWorkflowService(t *testing.T) {
+      t.Run("创建工作流模板", func(t *testing.T) {
+          // 测试创建逻辑
+      })
+      
+      t.Run("获取工作流模板", func(t *testing.T) {
+          // 测试获取逻辑  
+      })
+      
+      t.Run("更新工作流模板", func(t *testing.T) {
+          // 测试更新逻辑
+      })
+  }
+  ```
+
+## 配置管理
+- 环境配置文件：configs/config.yaml
+- 支持多环境配置 (dev, test, prod)
+- 敏感信息使用环境变量
+
+## 部署相关
+- 提供 Dockerfile
+- 支持 Docker Compose 本地开发
+- 提供 Kubernetes 部署文件
+
+## 开发时的具体要求：
+
+### 当创建 API 接口时：
+1. 先定义 protobuf 文件
+2. 生成 Go 代码
+3. 实现 service 层逻辑
+4. 添加适当的中间件（认证、日志、metrics）
+
+### 当实现数据访问时：
+1. 使用 Ent 定义 schema
+2. 生成 Ent 代码
+3. 在 data 层实现 repository 接口
+4. 在 biz 层定义业务逻辑
+
+### 当集成 Temporal 时：
+1. 定义工作流和活动
+2. 注册工作流和活动
+3. 配置 Temporal 客户端
+4. 实现工作流的生命周期管理
+
+### JSON 工作流配置格式：
+```json
+{
+  "name": "工作流名称",
+  "description": "工作流描述",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "id": "step1",
+      "name": "步骤名称",
+      "type": "activity",
+      "config": {
+        "activity_name": "SomeActivity",
+        "timeout": "30s",
+        "retry_policy": {
+          "max_attempts": 3
+        }
+      },
+      "next": ["step2"]
+    }
+  ],
+  "variables": {
+    "input_var": "string",
+    "output_var": "string"
+  }
+}
+```
+
+## 响应格式要求：
+- 所有API响应使用统一格式
+- 成功响应包含 data 字段
+- 错误响应包含 code 和 message 字段
+- 分页响应包含 total、page、page_size 字段
+
+## 安全要求：
+- 实现 JWT 认证
+- API 权限控制
+- 输入验证和消毒
+- SQL 注入防护
+
+记住：始终遵循 Go 的最佳实践，保持代码简洁、可读性强，并确保良好的错误处理和日志记录。 
