@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"workflow-engine/internal/auth"
+	"github.com/workflow-engine/workflow-engine/internal/auth"
 )
 
 // AuthMiddleware 认证中间件配置
