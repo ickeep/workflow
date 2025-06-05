@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/workflow-engine/workflow-engine/internal/data/ent"
-
+	"github.com/workflow-engine/workflow-engine/internal/temporal"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +20,7 @@ type ProcessInstanceUseCase struct {
 	processDefRepo      ProcessDefinitionRepo
 	variableRepo        ProcessVariableRepo
 	cache               CacheRepo
+	temporalClient      *temporal.Client
 	logger              *zap.Logger
 }
 
@@ -29,6 +30,7 @@ func NewProcessInstanceUseCase(
 	processDefRepo ProcessDefinitionRepo,
 	variableRepo ProcessVariableRepo,
 	cache CacheRepo,
+	temporalClient *temporal.Client,
 	logger *zap.Logger,
 ) *ProcessInstanceUseCase {
 	return &ProcessInstanceUseCase{
@@ -36,6 +38,7 @@ func NewProcessInstanceUseCase(
 		processDefRepo:      processDefRepo,
 		variableRepo:        variableRepo,
 		cache:               cache,
+		temporalClient:      temporalClient,
 		logger:              logger,
 	}
 }
