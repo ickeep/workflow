@@ -407,7 +407,48 @@ func (uc *ProcessInstanceUseCase) saveProcessVariables(ctx context.Context, inst
 	return nil
 }
 
-// getProcessVariables 获取流程变量
+// GetProcessVariables 获取流程实例的所有变量 (公共方法)
+func (uc *ProcessInstanceUseCase) GetProcessVariables(ctx context.Context, instanceID string) (map[string]interface{}, error) {
+	id, err := strconv.ParseInt(instanceID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("无效的流程实例ID: %s", instanceID)
+	}
+	return uc.getProcessVariables(ctx, id)
+}
+
+// SetProcessVariables 批量设置流程变量 (公共方法)
+func (uc *ProcessInstanceUseCase) SetProcessVariables(ctx context.Context, instanceID string, variables map[string]interface{}) error {
+	id, err := strconv.ParseInt(instanceID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("无效的流程实例ID: %s", instanceID)
+	}
+	return uc.saveProcessVariables(ctx, id, variables)
+}
+
+// GetProcessVariable 获取单个流程变量 (公共方法)
+func (uc *ProcessInstanceUseCase) GetProcessVariable(ctx context.Context, instanceID string, variableName string) (interface{}, error) {
+	variables, err := uc.GetProcessVariables(ctx, instanceID)
+	if err != nil {
+		return nil, err
+	}
+
+	value, exists := variables[variableName]
+	if !exists {
+		return nil, fmt.Errorf("变量 %s 不存在", variableName)
+	}
+
+	return value, nil
+}
+
+// SetProcessVariable 设置单个流程变量 (公共方法)
+func (uc *ProcessInstanceUseCase) SetProcessVariable(ctx context.Context, instanceID string, variableName string, value interface{}) error {
+	variables := map[string]interface{}{
+		variableName: value,
+	}
+	return uc.SetProcessVariables(ctx, instanceID, variables)
+}
+
+// getProcessVariables 获取流程变量 (私有方法)
 func (uc *ProcessInstanceUseCase) getProcessVariables(ctx context.Context, instanceID int64) (map[string]interface{}, error) {
 	variables, err := uc.variableRepo.ListByProcessInstanceID(ctx, strconv.FormatInt(instanceID, 10))
 	if err != nil {
