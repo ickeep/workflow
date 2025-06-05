@@ -1031,6 +1031,67 @@ type ExpressionEngine struct {
 
 ---
 
+## 开发进度跟踪
+
+### 当前状态
+- **当前阶段**: 阶段 2 已完成 ✅
+- **完成度**: 33.3% (2/6 阶段)
+- **下一步**: 阶段 3 - 业务逻辑层开发
+
+### 已完成阶段
+
+#### ✅ 阶段 1: 项目基础设施开发 (第1-2周)
+**完成时间**: 2024年12月
+**完成内容**:
+- ✅ 初始化 Kratos 项目结构
+- ✅ 设置 Docker Compose 开发环境 (PostgreSQL, Redis, Temporal)
+- ✅ 设置 Ent Schema 基础 (6个核心数据模型)
+- ✅ 创建配置管理 (支持 YAML 和环境变量)
+- ✅ 创建基础单元测试 (配置管理测试覆盖率 100%)
+- ✅ 创建 Dockerfile 和部署配置
+
+**验证结果**:
+- 所有单元测试通过 ✅
+- Docker Compose 配置验证通过 ✅
+- Ent 代码生成成功 ✅
+- 项目结构符合规范 ✅
+
+**生成的核心文件**:
+- `go.mod` - Go 模块定义
+- `configs/config.yaml` - 主配置文件
+- `docker-compose.yaml` - 开发环境配置
+- `internal/data/ent/schema/` - 6个数据模型 Schema
+- `pkg/config/` - 配置管理包
+- `deployments/docker/Dockerfile` - 容器化配置
+- `.dockerignore` - Docker 忽略文件
+
+#### ✅ 阶段 2: 数据访问层开发 (第3-4周)
+**完成时间**: 2024年12月
+**完成内容**:
+- ✅ 数据库连接管理 (`internal/data/data.go`)
+- ✅ Repository 接口定义 (`internal/biz/repository.go`)
+- ✅ 流程定义 Repository 实现 (`internal/data/repository/process_definition.go`)
+- ✅ 缓存 Repository 实现 (`internal/data/repository/cache.go`)
+- ✅ 数据库健康检查和迁移功能
+- ✅ Redis 缓存集成 (支持基本缓存和哈希缓存)
+- ✅ 完整的单元测试覆盖
+
+**验证结果**:
+- 数据访问层测试通过 ✅
+- Repository 层测试通过 ✅
+- 数据库连接和缓存功能验证通过 ✅
+- 代码符合项目规范 (中文注释、错误处理、日志记录) ✅
+
+**生成的核心文件**:
+- `internal/data/data.go` - 数据访问层核心
+- `internal/biz/repository.go` - Repository 接口定义
+- `internal/data/repository/process_definition.go` - 流程定义仓储实现
+- `internal/data/repository/cache.go` - 缓存仓储实现
+- `internal/data/data_test.go` - 数据访问层测试
+- `internal/data/repository/process_definition_test.go` - Repository 测试
+
+---
+
 ## 注意事项
 
 1. **开发优先级**: 严格按照阶段顺序进行，确保每个阶段完成后再进入下一阶段

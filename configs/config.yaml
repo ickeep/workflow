@@ -1,0 +1,54 @@
+# Workflow Engine 主配置文件
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 1s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 1s
+
+# 数据库配置
+data:
+  database:
+    driver: postgres
+    source: postgres://workflow:workflow@localhost:5432/workflow_engine?sslmode=disable
+    max_idle_conns: 10
+    max_open_conns: 100
+    conn_max_lifetime: 3600s
+  redis:
+    addr: localhost:6379
+    password: ""
+    db: 0
+    read_timeout: 1s
+    write_timeout: 1s
+
+# Temporal 配置
+temporal:
+  host_port: localhost:7233
+  namespace: default
+  task_queue: workflow-engine-tasks
+  workers:
+    max_concurrent_activities: 100
+    max_concurrent_workflow_tasks: 100
+
+# 日志配置
+log:
+  level: info
+  format: console
+  output: stdout
+
+# 认证配置
+auth:
+  secret: workflow-engine-secret-key
+  expires: 24h
+
+# 工作流引擎配置
+engine:
+  max_concurrent_executions: 1000
+  execution_timeout: 30m
+  step_timeout: 5m
+  retry:
+    max_attempts: 3
+    initial_interval: 1s
+    backoff_coefficient: 2.0
+    maximum_interval: 30s

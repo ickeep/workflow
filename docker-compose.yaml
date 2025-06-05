@@ -1,0 +1,111 @@
+# Docker Compose 配置文件 - 用于 Workflow Engine 本地开发环境
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15
+    container_name: workflow-postgres
+    environment:
+      POSTGRES_DB: workflow_engine
+      POSTGRES_USER: workflow
+      POSTGRES_PASSWORD: workflow
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workflow -d workflow_engine"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - workflow-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: workflow-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - workflow-network
+
+  # Temporal Server
+  temporal:
+    image: temporalio/auto-setup:1.23.1
+    container_name: workflow-temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=workflow
+      - POSTGRES_PWD=workflow
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./deployments/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+    networks:
+      - workflow-network
+
+  # Temporal Web UI
+  temporal-web:
+    image: temporalio/ui:2.26.2
+    container_name: workflow-temporal-web
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8080:8080"
+    networks:
+      - workflow-network
+
+  # Workflow Engine 应用 (开发时可选)
+  workflow-engine:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    container_name: workflow-engine-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    ports:
+      - "8000:8000" # HTTP
+      - "9000:9000" # gRPC
+    environment:
+      - CONFIG_FILE=/app/configs/config.yaml
+    volumes:
+      - ./configs:/app/configs
+    networks:
+      - workflow-network
+    profiles:
+      - app # 使用 profile，只有在明确指定时才启动
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  workflow-network:
+    driver: bridge
